@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FinAnalyza</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0f0c;
+    --bg2: #0d1a10;
+    --bg3: #111a14;
+    --border: #1e2e22;
+    --border2: #2d3a2e;
+    --green: #74c69d;
+    --green-dim: #2d6a4f;
+    --green-dark: #1a3a2a;
+    --text: #d4edda;
+    --text-dim: #6a9b7a;
+    --text-muted: #4a7c59;
+    --red: #f28b82;
+    --yellow: #fdd663;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 2px; }
+
+  input, textarea, button { font-family: inherit; font-size: 13px; }
+  input::placeholder, textarea::placeholder { color: #2d4a35; }
+  textarea:focus, input:focus { outline: none; }
+
+  /* HEADER */
+  #header {
+    width: 100%; max-width: 700px;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  #header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; color: var(--green); letter-spacing: 1px;
+  }
+  .badge {
+    font-size: 10px; padding: 2px 7px;
+    border: 1px solid var(--green-dark); border-radius: 3px;
+    color: var(--text-muted);
+  }
+  .badge.active { color: var(--green); border-color: var(--green-dim); }
+  #header-btns { margin-left: auto; display: flex; gap: 6px; }
+  .btn-sm {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 6px; color: var(--text-dim);
+    padding: 4px 9px; cursor: pointer;
+  }
+  .btn-sm:hover { color: var(--green); }
+  .btn-sm.active { background: var(--green-dim); color: var(--text); }
+
+  /* MESSAGES */
+  #messages {
+    flex: 1; width: 100%; max-width: 700px;
+    padding: 16px 20px 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 145px);
+  }
+
+  .msg-row {
+    display: flex; margin-bottom: 14px;
+    animation: fadeIn 0.25s ease;
+  }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.bot { justify-content: flex-start; }
+
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--green-dark); border: 1px solid var(--green-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--green); font-weight: 700;
+    margin-right: 8px; flex-shrink: 0; margin-top: 2px;
+  }
+
+  .bubble {
+    max-width: 78%; padding: 10px 14px;
+    color: var(--text); line-height: 1.65;
+  }
+  .bubble.user {
+    background: var(--green-dark); border: 1px solid var(--green-dim);
+    border-radius: 16px 16px 3px 16px;
+  }
+  .bubble.bot {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 16px 16px 16px 3px;
+  }
+  .bubble strong { color: var(--green); }
+  .bubble .title {
+    font-family: 'Playfair Display', serif;
+    color: var(--green); font-size: 15px; margin-bottom: 6px;
+  }
+
+  /* RESULT CARD */
+  .result-card {
+    margin-top: 10px;
+    background: var(--bg2); border: 1px solid var(--green-dim);
+    border-radius: 10px; padding: 14px;
+  }
+  .result-top {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 14px;
+  }
+  .result-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .result-main { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--green); line-height: 1; }
+  .result-diff { text-align: right; }
+  .result-diff-val { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; }
+  .result-diff-sub { font-size: 10px; color: var(--text-muted); }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+
+  .result-table {
+    display: grid; gap: 1px;
+    background: #1a2e1e; border-radius: 7px; overflow: hidden;
+    font-size: 11px;
+  }
+  .result-table.two-col { grid-template-columns: 1fr 1fr; }
+  .result-table.three-col { grid-template-columns: 1fr 1fr 1fr; }
+  .cell {
+    padding: 6px 10px;
+    background: var(--bg2);
+  }
+  .cell.head { background: #152018; color: var(--green); font-weight: 600; }
+  .cell.right { text-align: right; }
+  .cell.bold { font-weight: 700; }
+  .cell.dim { color: #8a9b8e; }
+
+  .result-note { margin-top: 8px; font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 8px; }
+
+  /* UPLOAD BUTTON */
+  .upload-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px; background: var(--green-dim); color: var(--text);
+    padding: 7px 12px; border-radius: 7px; cursor: pointer;
+    font-size: 12px; font-weight: 600; border: none;
+  }
+
+  /* STEPS LOG */
+  #steps {
+    padding-left: 36px; margin-bottom: 10px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .step { font-size: 11px; animation: fadeIn 0.2s ease; }
+  .step.info { color: var(--text-muted); }
+  .step.success { color: var(--green); }
+  .step.warn { color: var(--yellow); }
+  .step.error { color: var(--red); }
+  .spinner-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+  .spinner {
+    width: 11px; height: 11px;
+    border: 2px solid var(--green-dark);
+    border-top-color: var(--green);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  .spinner-label { font-size: 11px; color: var(--text-muted); }
+
+  /* INPUT */
+  #input-area {
+    width: 100%; max-width: 700px;
+    padding: 12px 20px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  #input-box {
+    display: flex; gap: 8px; align-items: flex-end;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 8px 12px;
+  }
+  #attach-btn { color: var(--text-muted); font-size: 16px; cursor: pointer; padding-bottom: 1px; }
+  #query-input {
+    flex: 1; background: transparent; border: none;
+    color: var(--text); resize: none;
+    line-height: 1.5; min-height: 22px; max-height: 100px;
+    overflow-y: auto;
+  }
+  #send-btn {
+    background: var(--green-dim); color: var(--text);
+    border: none; border-radius: 7px;
+    padding: 5px 12px; cursor: pointer; font-weight: 600;
+  }
+  #send-btn:disabled { background: #1a2e1e; color: #2d4a35; cursor: default; }
+
+  /* PANELS */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--green-dim);
+    border-radius: 12px; padding: 24px;
+    width: 420px; max-width: 90vw;
+  }
+  .modal h2 { font-family: 'Playfair Display', serif; color: var(--green); font-size: 16px; margin-bottom: 14px; }
+  .modal-note { font-size: 11px; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px; }
+  .modal input {
+    width: 100%; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 10px; color: var(--text); margin-bottom: 10px;
+  }
+  .modal input.ok { border-color: var(--green); }
+  .modal input.err { border-color: var(--red); }
+  .modal-status { font-size: 11px; margin-bottom: 10px; }
+  .modal-status.ok { color: var(--green); }
+  .modal-status.err { color: var(--red); }
+  .modal-btns { display: flex; gap: 8px; }
+  .btn-outline { flex: 1; background: var(--green-dark); border: 1px solid var(--green-dim); color: var(--green); border-radius: 7px; padding: 7px; cursor: pointer; }
+  .btn-primary { flex: 1; background: var(--green-dim); border: none; color: var(--text); border-radius: 7px; padding: 7px; cursor: pointer; font-weight: 600; }
+  .btn-ghost { background: var(--bg3); border: 1px solid var(--border); color: var(--text-muted); border-radius: 7px; padding: 7px 10px; cursor: pointer; }
+  .modal-footer { margin-top: 14px; font-size: 10px; color: #2d4a35; line-height: 1.7; border-top: 1px solid var(--border); padding-top: 12px; }
+
+  /* SEZNAM FIREM */
+  #seznam-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 300px;
+    background: var(--bg2); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 100;
+    animation: slideIn 0.2s ease;
+  }
+  #seznam-panel h2 { font-family: 'Playfair Display', serif; color: var(--green); font-size: 15px; }
+  .panel-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 20px; line-height: 1; }
+  .panel-form { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .panel-form label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px; }
+  .panel-form input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; color: var(--text); margin-bottom: 6px; }
+  .panel-form button { width: 100%; background: var(--green-dim); color: var(--text); border: none; border-radius: 6px; padding: 7px; cursor: pointer; }
+  .panel-form button:disabled { background: var(--green-dark); color: #2d4a35; cursor: default; }
+  .panel-list { flex: 1; overflow-y: auto; }
+  .panel-empty { padding: 20px 16px; font-size: 12px; color: #2d4a35; text-align: center; line-height: 1.6; }
+  .firma-row { display: flex; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--bg); }
+  .firma-info { flex: 1; }
+  .firma-name { font-size: 12px; color: var(--text); }
+  .firma-ico { font-size: 10px; color: var(--text-muted); }
+  .firma-del { background: none; border: none; color: #3a2222; cursor: pointer; font-size: 16px; padding: 2px 4px; }
+  .firma-del:hover { color: var(--red); }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  @keyframes slideIn { from { transform:translateX(300px); } to { transform:none; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <h1>FinAnalyza</h1>
+  <span class="badge" id="backend-badge">bez backendu</span>
+  <div id="header-btns">
+    <button class="btn-sm" onclick="toggleNastaveni()">Nastaveni</button>
+    <button class="btn-sm" id="seznam-btn" onclick="toggleSeznam()">Seznam firem (<span id="seznam-count">0</span>)</button>
+  </div>
+</div>
+
+<!-- MESSAGES -->
+<div id="messages"></div>
+
+<!-- STEPS -->
+<div id="steps"></div>
+
+<!-- INPUT -->
+<div id="input-area">
+  <div id="input-box">
+    <label id="attach-btn" title="Nahrat PDF">
+      📎
+      <input type="file" accept=".pdf" id="file-input" style="display:none" onchange="handleFileUpload(event)" />
+    </label>
+    <textarea id="query-input" rows="1" placeholder="Marze Alzy rok 2022 / ICO 27082440 rok 2022"
+      oninput="autoResize(this)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSend()}"
+    ></textarea>
+    <button id="send-btn" onclick="handleSend()">odeslat</button>
+  </div>
+</div>
+
+<!-- NASTAVENI MODAL -->
+<div class="overlay" id="nastaveni-overlay" style="display:none">
+  <div class="modal">
+    <h2>Nastaveni backendu</h2>
+    <p class="modal-note">Backend URL z Railway.app. Bez backendu funguje stazeni jen pres proxy (casto blokuje justice.cz).</p>
+    <input type="text" id="backend-input" placeholder="https://web-production-xxxx.up.railway.app" />
+    <div class="modal-status" id="test-status"></div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="testBackend()">Otestovat</button>
+      <button class="btn-primary" onclick="saveBackend()">Ulozit</button>
+      <button class="btn-ghost" onclick="toggleNastaveni()">Zrusit</button>
+    </div>
+    <div class="modal-footer">
+      Jak nasadit: github.com → nahrat soubory → railway.app → deploy → zkopirovat URL
+    </div>
+  </div>
+</div>
+
+<!-- SEZNAM FIREM PANEL -->
+<div id="seznam-panel" style="display:none">
+  <div class="panel-header">
+    <h2>Seznam firem</h2>
+    <button class="close-btn" onclick="toggleSeznam()">×</button>
+  </div>
+  <div class="panel-form">
+    <label>Pridat firmu</label>
+    <input type="text" id="new-ico" placeholder="ICO (povinne)" />
+    <input type="text" id="new-name" placeholder="Nazev (nebo se dopta ARES)" />
+    <button id="add-firma-btn" onclick="addFirma()">Pridat</button>
+  </div>
+  <div class="panel-list" id="panel-list"></div>
+</div>
+
+<script>
+// ---- STATE ----
+let backendUrl = localStorage.getItem('fin_backend') || '';
+let directory = JSON.parse(localStorage.getItem('fin_directory') || '[]');
+let loading = false;
+let pendingCtx = null;
+
+// ---- INIT ----
+updateBackendBadge();
+renderSeznam();
+addBotMessage(
+  "Dobry den! Jsem analytik ceskych financnich vykazu.\n\nZeptejte se me napr.:\n- Marze Alzy rok 2022\n- ICO 27082440 rok 2022\n\nPotrebuji ICO (nebo nazev ze Seznamu firem) a rok.",
+  null
+);
+
+// ---- HELPERS ----
+function czk(val) {
+  if (val == null) return 'N/A';
+  return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 }).format(val * 1000);
+}
+function pct(val) {
+  return val != null ? (val * 100).toFixed(1) + '%' : 'N/A';
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+function scrollBottom() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+// ---- BACKEND ----
+function updateBackendBadge() {
+  const badge = document.getElementById('backend-badge');
+  if (backendUrl) {
+    badge.textContent = 'backend aktivni';
+    badge.className = 'badge active';
+  } else {
+    badge.textContent = 'bez backendu';
+    badge.className = 'badge';
+  }
+}
+
+async function apiGet(path) {
+  const base = backendUrl.replace(/\/$/, '');
+  const res = await fetch(base + path);
+  if (!res.ok) throw new Error('Backend chyba: ' + res.status);
+  return res.json();
+}
+
+async function fetchWithProxy(url) {
+  const proxies = ['https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='];
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy + encodeURIComponent(url));
+      if (res.ok) return res;
+    } catch(e) { continue; }
+  }
+  throw new Error('Proxy selhala.');
+}
+
+async function getCompanyName(ico) {
+  if (backendUrl) {
+    const data = await apiGet('/firma/' + ico);
+    return data.nazev;
+  }
+  const url = 'https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/' + ico;
+  const res = await fetchWithProxy(url);
+  const data = await res.json();
+  return data.obchodniJmeno || data.nazev || 'Neznama firma';
+}
+
+async function getPdfUrls(ico, rok) {
+  if (backendUrl) {
+    const data = await apiGet('/dokumenty/' + ico + '?rok=' + rok);
+    return data.dokumenty.map(d => ({ url: d.url, id: d.id, typ: d.typ, rok: d.rok }));
+  }
+  const url = 'https://or.justice.cz/ias/ui/vypis-sl-firma?subjektId=&ico=' + ico;
+  const res = await fetchWithProxy(url);
+  const html = await res.text();
+  const matches = [...html.matchAll(/\/ias\/content\/download\?id=(\d+)/gi)];
+  return matches.map(m => ({ id: m[1], url: 'https://or.justice.cz/ias/content/download?id=' + m[1], typ: 'neznamy', rok: null }));
+}
+
+async function fetchPdfBase64(doc) {
+  if (backendUrl) {
+    const data = await apiGet('/pdf/' + doc.id);
+    return data.base64;
+  }
+  const res = await fetchWithProxy(doc.url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---- CLAUDE API ----
+const SYSTEM_PROMPT = [
+  "Jsi financni analytik specializovany na ceske ucetni vykazy.",
+  "Dostanes PDF vykazu zisku a ztraty ceske firmy.",
+  "Najdi hodnoty pro VSECHNA dostupna obdobi (aktualni rok i predchozi rok):",
+  "- Radek I. = Trzby za prodej zbozi",
+  "- Radek A. = Naklady vynalozene na prodane zbozi",
+  "Hodnoty jsou v tisicich Kc.",
+  "Spocitej marzi: marze = 1 - (A / I)",
+  'Odpovez POUZE tímto JSON (bez backticks): {"nalezeno":true,"obdobi":[{"rok":2022,"trzby":12500,"naklady":9800,"marze":0.216},{"rok":2021,"trzby":11000,"naklady":8900,"marze":0.191}],"poznamka":"..."}',
+  'Pokud data nelze najit: {"nalezeno":false,"poznamka":"Vysvetleni."}',
+  "Vrat vzdy vsechna obdobi ktera v dokumentu najdes.",
+].join('\n');
+
+async function claudeAnalyzePdf(base64, rokHint) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1200,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+          { type: 'text', text: 'Analyzuj vykaz. Hledam rok ' + rokHint + ' a srovnani s predchozim rokem. Vrat JSON.' },
+        ],
+      }],
+    }),
+  });
+  const data = await res.json();
+  const text = (data.content || []).map(c => c.text || '').join('');
+  const match = text.replace(/```[a-z]*/g, '').replace(/```/g, '').trim().match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Neplatna odpoved Claude.');
+  return JSON.parse(match[0]);
+}
+
+async function claudeParseQuery(query) {
+  const dirCtx = directory.length > 0
+    ? 'Seznam firem:\n' + directory.map(d => d.name + ' -> ' + d.ico).join('\n') + '\n\n'
+    : '';
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 150,
+      messages: [{
+        role: 'user',
+        content: dirCtx + 'Extrahuj ICO (8 cislic) a rok z dotazu. Pokud je v dotazu nazev firmy, najdi ICO v seznamu.\nVrat pouze JSON: {"ico":"12345678","rok":2022}\n\nDotaz: ' + query,
+      }],
+    }),
+  });
+  const data = await res.json();
+  const text = (data.content || []).map(c => c.text || '').join('');
+  const match = text.replace(/```[a-z]*/g, '').replace(/```/g, '').trim().match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Nepodarilo se parsovat dotaz.');
+  return JSON.parse(match[0]);
+}
+
+// ---- ANALYSIS ----
+async function runAnalysis(ico, rok, firma, base64Override) {
+  if (base64Override) {
+    addStep('Analyzuji PDF s Claude...', 'info');
+    const r = await claudeAnalyzePdf(base64Override, rok);
+    return r.nalezeno ? { ...r, firma, ico, rok } : r;
+  }
+
+  addStep('Hledam dokumenty na justice.cz...', 'info');
+  const docs = await getPdfUrls(ico, rok);
+  addStep('Nalezeno ' + docs.length + ' dokumentu', docs.length ? 'success' : 'warn');
+
+  // Log first few with type info
+  docs.slice(0, 3).forEach(d => {
+    if (d.typ && d.typ !== 'neznamy') {
+      addStep('  ' + d.typ + (d.rok ? ' ' + d.rok : '') + ' (id:' + d.id + ')', 'info');
+    }
+  });
+
+  for (const doc of docs.slice(0, 8)) {
+    try {
+      addStep('Stahuji PDF id:' + doc.id + (doc.typ !== 'neznamy' ? ' [' + doc.typ + ']' : '') + '...', 'info');
+      const b64 = await fetchPdfBase64(doc);
+      addStep('Analyzuji s Claude...', 'info');
+      const r = await claudeAnalyzePdf(b64, rok);
+      if (r.nalezeno) {
+        const hasRok = r.obdobi && r.obdobi.some(o => o.rok === rok);
+        if (hasRok || r.obdobi?.length > 0) {
+          return { ...r, firma, ico, rok };
+        }
+      }
+      addStep('Dokument nema data pro rok ' + rok, 'warn');
+    } catch(e) {
+      addStep('Chyba: ' + e.message, 'warn');
+    }
+  }
+  return null;
+}
+
+// ---- UI: MESSAGES ----
+function addUserMessage(text) {
+  const div = document.createElement('div');
+  div.className = 'msg-row user';
+  div.innerHTML = '<div class="bubble user">' + escHtml(text) + '</div>';
+  document.getElementById('messages').appendChild(div);
+  scrollBottom();
+}
+
+function addBotMessage(text, result) {
+  const div = document.createElement('div');
+  div.className = 'msg-row bot';
+  div.innerHTML = '<div class="avatar">F</div><div class="bubble bot">' + renderText(text) + renderResult(result) + '</div>';
+  document.getElementById('messages').appendChild(div);
+  scrollBottom();
+  return div;
+}
+
+function addUploadMessage(ico, rok, firma) {
+  const div = document.createElement('div');
+  div.className = 'msg-row bot';
+  div.innerHTML = '<div class="avatar">F</div><div class="bubble bot">' +
+    renderText('Nepodarilo se automaticky stahnout vykaz firmy ' + escHtml(firma) + '.\n\n' +
+      (!backendUrl ? 'Tip: nastavte backend URL v Nastaveni.\n\n' : '') +
+      'Postup:\n1. Jdete na or.justice.cz\n2. Vyhledejte ICO ' + ico + '\n3. Stahnete PDF vykazu zisku a ztraty za rok ' + rok + '\n4. Nahrajte ho tlacitkem nize') +
+    '<label class="upload-btn">Nahrat PDF<input type="file" accept=".pdf" style="display:none" onchange="handleFileUpload(event)" /></label>' +
+    '</div>';
+  document.getElementById('messages').appendChild(div);
+  scrollBottom();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderText(text) {
+  if (!text) return '';
+  return text.split('\n').map(line => {
+    if (line.startsWith('## ')) return '<div class="title">' + escHtml(line.slice(3)) + '</div>';
+    if (line === '') return '<br>';
+    return '<div style="margin:1px 0">' + escHtml(line).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') + '</div>';
+  }).join('');
+}
+
+function renderResult(result) {
+  if (!result || !result.nalezeno || !result.obdobi || !result.obdobi.length) return '';
+  const sorted = [...result.obdobi].sort((a,b) => b.rok - a.rok);
+  const cur = sorted[0];
+  const prev = sorted[1] || null;
+  const diff = prev ? cur.marze - prev.marze : null;
+  const diffCls = diff === null ? '' : (diff > 0 ? 'pos' : 'neg');
+  const diffStr = diff === null ? '' : (diff > 0 ? '+' : '') + pct(diff);
+  const cols = prev ? 'three-col' : 'two-col';
+
+  let topRight = '';
+  if (prev) {
+    topRight = '<div class="result-diff">' +
+      '<div class="result-label">vs. ' + prev.rok + '</div>' +
+      '<div class="result-diff-val ' + diffCls + '">' + diffStr + '</div>' +
+      '<div class="result-diff-sub">' + prev.rok + ': ' + pct(prev.marze) + '</div>' +
+      '</div>';
+  }
+
+  const rows = [
+    ['Polozka', '' + cur.rok, prev ? '' + prev.rok : null],
+    ['Trzby (I.)', czk(cur.trzby), prev ? czk(prev.trzby) : null],
+    ['Naklady (A.)', czk(cur.naklady), prev ? czk(prev.naklady) : null],
+    ['Marze', pct(cur.marze), prev ? pct(prev.marze) : null],
+  ];
+
+  let tableHtml = '<div class="result-table ' + cols + '">';
+  rows.forEach((row, i) => {
+    tableHtml += '<div class="cell head">' + escHtml(row[0]) + '</div>';
+    tableHtml += '<div class="cell right' + (i===3?' bold':'') + '">' + escHtml(row[1]) + '</div>';
+    if (prev) tableHtml += '<div class="cell right dim">' + escHtml(row[2] || '') + '</div>';
+  });
+  tableHtml += '</div>';
+
+  let note = result.poznamka ? '<div class="result-note">' + escHtml(result.poznamka) + '</div>' : '';
+
+  return '<div class="result-card">' +
+    '<div class="result-top">' +
+      '<div><div class="result-label">Marze ' + cur.rok + '</div><div class="result-main">' + pct(cur.marze) + '</div></div>' +
+      topRight +
+    '</div>' +
+    tableHtml + note +
+    '</div>';
+}
+
+// ---- STEPS ----
+function addStep(text, type) {
+  const div = document.createElement('div');
+  div.className = 'step ' + (type || 'info');
+  div.textContent = text;
+  document.getElementById('steps').appendChild(div);
+  scrollBottom();
+}
+
+function clearSteps() {
+  document.getElementById('steps').innerHTML = '';
+}
+
+let spinnerEl = null;
+function showSpinner() {
+  spinnerEl = document.createElement('div');
+  spinnerEl.className = 'spinner-row';
+  spinnerEl.innerHTML = '<div class="spinner"></div><span class="spinner-label">Pracuji...</span>';
+  document.getElementById('steps').appendChild(spinnerEl);
+  scrollBottom();
+}
+function hideSpinner() {
+  if (spinnerEl) { spinnerEl.remove(); spinnerEl = null; }
+}
+
+function setLoading(val) {
+  loading = val;
+  document.getElementById('send-btn').disabled = val;
+  document.getElementById('query-input').disabled = val;
+  if (val) showSpinner(); else hideSpinner();
+}
+
+// ---- SEND ----
+async function handleSend() {
+  const input = document.getElementById('query-input');
+  const query = input.value.trim();
+  if (!query || loading) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  addUserMessage(query);
+  clearSteps();
+  setLoading(true);
+
+  try {
+    addStep('Parsuju dotaz...', 'info');
+    const parsed = await claudeParseQuery(query);
+    if (!parsed.ico || String(parsed.ico) === 'null') throw new Error('ICO nenalezeno. Zadejte 8mistne ICO nebo nazev firmy ze Seznamu firem.');
+    if (!parsed.rok) throw new Error('Rok nenalezen. Zadejte rok napr. 2022.');
+
+    const ico = String(parsed.ico).padStart(8, '0');
+    const rok = parseInt(parsed.rok);
+    addStep('ICO: ' + ico + ' | Rok: ' + rok, 'success');
+
+    let firma = directory.find(d => d.ico === ico)?.name || null;
+    if (!firma) {
+      try {
+        addStep('Hledam nazev v ARES...', 'info');
+        firma = await getCompanyName(ico);
+        addStep('Firma: ' + firma, 'success');
+        if (!directory.find(d => d.ico === ico)) {
+          directory.push({ name: firma, ico });
+          localStorage.setItem('fin_directory', JSON.stringify(directory));
+          renderSeznam();
+          addStep('Pridano do Seznamu firem', 'success');
+        }
+      } catch(e) { firma = 'ICO ' + ico; }
+    } else {
+      addStep('Firma: ' + firma, 'success');
+    }
+
+    const result = await runAnalysis(ico, rok, firma, null);
+
+    if (!result) {
+      pendingCtx = { ico, rok, firma };
+      addUploadMessage(ico, rok, firma);
+      return;
+    }
+
+    const sorted = result.obdobi ? [...result.obdobi].sort((a,b) => b.rok - a.rok) : [];
+    const cur = sorted[0];
+    const prev = sorted[1] || null;
+    let content = '## ' + firma + '\n\nMarze ' + (cur?.rok || rok) + ': **' + pct(cur?.marze) + '**';
+    if (prev) content += '\nSrovnani s ' + prev.rok + ': **' + pct(prev.marze) + '**';
+    addBotMessage(content, result);
+
+  } catch(err) {
+    addBotMessage('Chyba: ' + err.message, null);
+  } finally {
+    setLoading(false);
+    clearSteps();
+  }
+}
+
+// ---- FILE UPLOAD ----
+async function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const ctx = pendingCtx || { rok: new Date().getFullYear() - 1, firma: 'Firma', ico: '' };
+  pendingCtx = null;
+
+  addUserMessage('Nahravam: ' + file.name);
+  clearSteps();
+  setLoading(true);
+
+  try {
+    addStep('Ctu PDF...', 'info');
+    const b64 = await fileToBase64(file);
+    const result = await runAnalysis(ctx.ico, ctx.rok, ctx.firma, b64);
+
+    if (result && result.nalezeno) {
+      const sorted = [...result.obdobi].sort((a,b) => b.rok - a.rok);
+      const cur = sorted[0];
+      const prev = sorted[1] || null;
+      let content = '## ' + ctx.firma + '\n\nMarze ' + (cur?.rok || ctx.rok) + ': **' + pct(cur?.marze) + '**';
+      if (prev) content += '\nSrovnani s ' + prev.rok + ': **' + pct(prev.marze) + '**';
+      addBotMessage(content, result);
+    } else {
+      addBotMessage('Data nenalezena.\n\n' + (result?.poznamka || ''), null);
+    }
+  } catch(err) {
+    addBotMessage('Chyba: ' + err.message, null);
+  } finally {
+    setLoading(false);
+    clearSteps();
+    e.target.value = '';
+  }
+}
+
+// ---- NASTAVENI ----
+function toggleNastaveni() {
+  const overlay = document.getElementById('nastaveni-overlay');
+  const visible = overlay.style.display !== 'none';
+  overlay.style.display = visible ? 'none' : 'flex';
+  if (!visible) {
+    document.getElementById('backend-input').value = backendUrl;
+    document.getElementById('test-status').textContent = '';
+    document.getElementById('backend-input').className = '';
+  }
+}
+
+async function testBackend() {
+  const url = document.getElementById('backend-input').value.trim();
+  if (!url) return;
+  const status = document.getElementById('test-status');
+  const inp = document.getElementById('backend-input');
+  status.textContent = 'Testuju...';
+  status.className = 'modal-status';
+  try {
+    const res = await fetch(url.replace(/\/$/, '') + '/health');
+    if (res.ok) {
+      status.textContent = 'Backend dostupny';
+      status.className = 'modal-status ok';
+      inp.className = 'ok';
+    } else {
+      throw new Error('HTTP ' + res.status);
+    }
+  } catch(e) {
+    status.textContent = 'Backend nedostupny: ' + e.message;
+    status.className = 'modal-status err';
+    inp.className = 'err';
+  }
+}
+
+function saveBackend() {
+  backendUrl = document.getElementById('backend-input').value.trim();
+  localStorage.setItem('fin_backend', backendUrl);
+  updateBackendBadge();
+  toggleNastaveni();
+}
+
+// ---- SEZNAM FIREM ----
+function toggleSeznam() {
+  const panel = document.getElementById('seznam-panel');
+  const btn = document.getElementById('seznam-btn');
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'flex';
+  btn.classList.toggle('active', !visible);
+}
+
+function renderSeznam() {
+  document.getElementById('seznam-count').textContent = directory.length;
+  const list = document.getElementById('panel-list');
+  if (directory.length === 0) {
+    list.innerHTML = '<div class="panel-empty">Seznam je prazdny.<br>Pridejte firmy jejich ICO.</div>';
+    return;
+  }
+  list.innerHTML = directory.map((d, i) =>
+    '<div class="firma-row">' +
+      '<div class="firma-info"><div class="firma-name">' + escHtml(d.name) + '</div><div class="firma-ico">ICO: ' + d.ico + '</div></div>' +
+      '<button class="firma-del" onclick="removeFirma(' + i + ')">×</button>' +
+    '</div>'
+  ).join('');
+}
+
+async function addFirma() {
+  const icoEl = document.getElementById('new-ico');
+  const nameEl = document.getElementById('new-name');
+  const btn = document.getElementById('add-firma-btn');
+  const ico = icoEl.value.trim().padStart(8, '0');
+  if (!ico || ico === '00000000') return;
+
+  btn.disabled = true;
+  btn.textContent = 'Pridavam...';
+
+  let name = nameEl.value.trim();
+  if (!name) {
+    try { name = await getCompanyName(ico); }
+    catch(e) { name = 'ICO ' + ico; }
+  }
+
+  directory = directory.filter(d => d.ico !== ico);
+  directory.push({ name, ico });
+  localStorage.setItem('fin_directory', JSON.stringify(directory));
+  renderSeznam();
+
+  icoEl.value = '';
+  nameEl.value = '';
+  btn.disabled = false;
+  btn.textContent = 'Pridat';
+}
+
+function removeFirma(i) {
+  directory.splice(i, 1);
+  localStorage.setItem('fin_directory', JSON.stringify(directory));
+  renderSeznam();
+}
+</script>
+</body>
+</html>
